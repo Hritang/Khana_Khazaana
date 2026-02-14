@@ -1,166 +1,494 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Khana Khazaana Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-start: #f0cf89;
+      --bg-end: #f7e2b9;
+      --surface: rgba(255, 249, 236, 0.82);
+      --surface-strong: rgba(255, 251, 242, 0.92);
+      --line: rgba(174, 135, 63, 0.35);
+      --text: #3b2f1a;
+      --muted: #7f6641;
+      --brand: #0f6a57;
+      --brand-dark: #0c4f42;
+      --glow: rgba(255, 241, 198, 0.7);
+    }
 
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: "Poppins", sans-serif;
+    }
 
-<title>Khana Khazaana Dashboard</title>
+    body {
+      min-height: 100vh;
+      color: var(--text);
+      background: radial-gradient(circle at 14% 10%, #f7ddab 0%, transparent 36%),
+        radial-gradient(circle at 86% 18%, #f6e7c0 0%, transparent 32%),
+        linear-gradient(150deg, var(--bg-start), var(--bg-end));
+      position: relative;
+      overflow-x: hidden;
+      padding: 32px 20px 56px;
+    }
 
-<link rel="stylesheet" href="css/style.css">
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image: radial-gradient(var(--glow) 1px, transparent 1px);
+      background-size: 24px 24px;
+      opacity: 0.2;
+    }
 
-<style>
+    .dashboard-shell {
+      max-width: 1120px;
+      margin: 0 auto;
+      position: relative;
+      z-index: 1;
+    }
 
-.dashboard-container {
+    .top-nav {
+      border: 1px solid var(--line);
+      background: var(--surface);
+      border-radius: 999px;
+      box-shadow: 0 10px 30px rgba(121, 94, 42, 0.14);
+      backdrop-filter: blur(8px);
+      padding: 12px 20px;
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 28px;
+    }
 
-  max-width: 800px;
-  margin: 50px auto;
-  background: rgba(255,255,255,0.6);
-  padding: 30px;
-  border-radius: 20px;
+    .brand {
+      font-family: "Cormorant Garamond", serif;
+      font-size: 40px;
+      line-height: 1;
+      color: #5b451f;
+      letter-spacing: 0.5px;
+      white-space: nowrap;
+    }
 
-}
+    .nav-center {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
 
-.form-group {
+    .nav-item {
+      color: #4f3e21;
+      text-decoration: none;
+      padding: 8px 18px;
+      border-radius: 999px;
+      border: 1px solid transparent;
+      font-weight: 500;
+      transition: all 0.2s ease;
+    }
 
-  margin-bottom: 20px;
+    .nav-item.active {
+      background: var(--surface-strong);
+      border-color: rgba(174, 135, 63, 0.2);
+      box-shadow: 0 4px 14px rgba(83, 63, 30, 0.12);
+    }
 
-}
+    .nav-item:hover {
+      border-color: rgba(174, 135, 63, 0.25);
+      background: rgba(255, 255, 255, 0.55);
+    }
 
-input, select {
+    .user-pill {
+      border: 1px solid rgba(174, 135, 63, 0.28);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.52);
+      padding: 8px 16px;
+      font-weight: 600;
+      color: #4f3e21;
+      white-space: nowrap;
+    }
 
-  width: 100%;
-  padding: 10px;
-  border-radius: 8px;
-  border: 1px solid #ccc;
+    .hero-card {
+      border: 1px solid var(--line);
+      border-radius: 34px;
+      background: var(--surface);
+      box-shadow: 0 22px 44px rgba(111, 83, 33, 0.18);
+      padding: 28px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 28px;
+      position: relative;
+      overflow: hidden;
+    }
 
-}
+    .hero-card::after {
+      content: "";
+      position: absolute;
+      width: 220px;
+      height: 220px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255, 248, 225, 0.8) 0%, rgba(255, 248, 225, 0) 70%);
+      right: -30px;
+      top: -40px;
+      pointer-events: none;
+    }
 
-button {
+    .visual-zone {
+      border: 1px solid rgba(174, 135, 63, 0.18);
+      border-radius: 24px;
+      background: linear-gradient(145deg, rgba(255, 255, 255, 0.76), rgba(255, 247, 230, 0.56));
+      min-height: 330px;
+      padding: 26px;
+      position: relative;
+      overflow: hidden;
+    }
 
-  padding: 12px 20px;
-  border: none;
-  border-radius: 10px;
-  background: #184d3b;
-  color: white;
-  cursor: pointer;
+    .visual-zone h1 {
+      font-family: "Cormorant Garamond", serif;
+      font-size: 42px;
+      line-height: 1.05;
+      color: #5e4622;
+      max-width: 320px;
+      margin-bottom: 8px;
+    }
 
-}
+    .visual-zone p {
+      color: var(--muted);
+      max-width: 310px;
+      line-height: 1.55;
+      font-size: 14px;
+    }
 
-.result {
+    .float-dot {
+      position: absolute;
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, #fff, #e8c67d);
+      box-shadow: 0 6px 18px rgba(95, 67, 25, 0.25);
+      opacity: 0.7;
+    }
 
-  margin-top: 20px;
-  padding: 15px;
-  background: white;
-  border-radius: 10px;
+    .dot-1 { width: 52px; height: 52px; right: 18%; top: 24%; }
+    .dot-2 { width: 22px; height: 22px; right: 30%; bottom: 20%; }
+    .dot-3 { width: 66px; height: 66px; left: 14%; bottom: 12%; }
 
-}
+    .form-zone {
+      position: relative;
+      z-index: 1;
+    }
 
-</style>
+    .section-title {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #4e3d21;
+    }
 
+    .input-control,
+    .select-control {
+      width: 100%;
+      border-radius: 16px;
+      border: 1px solid rgba(174, 135, 63, 0.45);
+      padding: 12px 14px;
+      background: rgba(255, 255, 255, 0.76);
+      font-size: 16px;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .input-control:focus,
+    .select-control:focus {
+      border-color: rgba(15, 106, 87, 0.5);
+      box-shadow: 0 0 0 3px rgba(15, 106, 87, 0.16);
+    }
+
+    .field-stack {
+      display: grid;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .fetch-btn {
+      border-radius: 999px;
+      border: 1px solid rgba(15, 106, 87, 0.4);
+      background: rgba(17, 119, 98, 0.1);
+      color: var(--brand-dark);
+      font-weight: 600;
+      padding: 9px 16px;
+      cursor: pointer;
+      margin-bottom: 14px;
+    }
+
+    .constraint-wrap {
+      margin-top: 6px;
+    }
+
+    .chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .constraint-chip {
+      border: 1px solid rgba(174, 135, 63, 0.55);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.65);
+      color: #6a532f;
+      padding: 9px 14px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .constraint-chip.active {
+      background: linear-gradient(145deg, #b08a45, #9a7435);
+      color: #fff5df;
+      border-color: transparent;
+      box-shadow: 0 7px 18px rgba(130, 92, 34, 0.34);
+    }
+
+    .primary-btn {
+      margin-top: 18px;
+      width: 100%;
+      border: none;
+      border-radius: 999px;
+      background: linear-gradient(115deg, #106d58, #074e42);
+      color: #f2fff9;
+      font-size: 28px;
+      font-family: "Cormorant Garamond", serif;
+      font-weight: 600;
+      padding: 12px 18px;
+      cursor: pointer;
+      box-shadow: 0 10px 24px rgba(10, 74, 61, 0.3);
+      transition: transform 0.15s ease, filter 0.2s ease;
+    }
+
+    .primary-btn:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.04);
+    }
+
+    .status-line {
+      margin-top: 14px;
+      min-height: 22px;
+      font-size: 14px;
+      color: #5f4a26;
+    }
+
+    .results-card {
+      margin-top: 20px;
+      border: 1px solid var(--line);
+      border-radius: 30px;
+      background: var(--surface);
+      box-shadow: 0 16px 36px rgba(111, 83, 33, 0.16);
+      padding: 24px;
+    }
+
+    .results-card h2 {
+      font-size: 36px;
+      line-height: 1;
+      font-family: "Cormorant Garamond", serif;
+      color: #4d3a1f;
+      margin-bottom: 12px;
+    }
+
+    .results-placeholder {
+      color: #846f48;
+      font-size: 14px;
+    }
+
+    .suggestion-grid {
+      margin-top: 14px;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .suggestion-card {
+      border: 1px solid rgba(174, 135, 63, 0.26);
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.78);
+      box-shadow: 0 10px 24px rgba(111, 83, 33, 0.12);
+      padding: 14px;
+    }
+
+    .rank-line {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .rank-id {
+      font-weight: 700;
+      color: #5d431c;
+      font-size: 15px;
+    }
+
+    .ingredient-name {
+      font-size: 24px;
+      font-family: "Cormorant Garamond", serif;
+      color: #3c2f1a;
+      margin-top: 2px;
+    }
+
+    .match-score {
+      margin-top: 4px;
+      font-size: 17px;
+      color: #8d6b33;
+      font-weight: 700;
+    }
+
+    .meta-line {
+      margin-top: 8px;
+      font-size: 13px;
+      color: #5c4a2d;
+    }
+
+    .chip-list {
+      margin-top: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+    }
+
+    .flavor-chip {
+      border: 1px solid rgba(174, 135, 63, 0.32);
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: 12px;
+      color: #68512c;
+      background: rgba(255, 251, 239, 0.86);
+    }
+
+    .why-line {
+      margin-top: 8px;
+      font-size: 12px;
+      color: #6d5934;
+      line-height: 1.4;
+    }
+
+    .visually-hidden {
+      position: absolute !important;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      border: 0;
+    }
+
+    @media (max-width: 980px) {
+      .top-nav {
+        grid-template-columns: 1fr;
+        border-radius: 22px;
+        padding: 14px;
+        text-align: center;
+      }
+
+      .brand {
+        font-size: 34px;
+      }
+
+      .hero-card {
+        grid-template-columns: 1fr;
+      }
+
+      .visual-zone {
+        min-height: 220px;
+      }
+
+      .suggestion-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
 </head>
 <body>
+  <div class="dashboard-shell">
+    <header class="top-nav">
+      <div class="brand">Khana Khazaana</div>
+      <nav class="nav-center">
+        <a class="nav-item active" href="index.html">Home</a>
+        <a class="nav-item" href="#">Recipes</a>
+        <a class="nav-item" href="#">Market</a>
+      </nav>
+      <div class="user-pill">Khana Khazaana</div>
+    </header>
 
+    <section class="hero-card">
+      <div class="visual-zone">
+        <h1>Flavor Intelligent Substitution</h1>
+        <p>
+          Enter a dish, pick the missing ingredient, apply a dietary constraint,
+          and get ranked replacements based on FlavorDB similarity.
+        </p>
+        <span class="float-dot dot-1"></span>
+        <span class="float-dot dot-2"></span>
+        <span class="float-dot dot-3"></span>
+      </div>
 
-<div class="main-container">
+      <div class="form-zone">
+        <div class="field-stack">
+          <div>
+            <p class="section-title">Dish Name</p>
+            <input class="input-control" type="text" id="dishInput" placeholder="e.g., Chicken Curry">
+          </div>
 
+          <button class="fetch-btn" type="button" onclick="fetchIngredients()">Fetch Ingredients</button>
 
-<div class="navbar">
+          <div>
+            <p class="section-title">Select Missing Ingredient</p>
+            <select class="select-control" id="ingredientSelect">
+              <option value="">Fetch ingredients first</option>
+            </select>
+          </div>
 
-<div class="logo">Khana Khazaana</div>
+          <div class="constraint-wrap">
+            <p class="section-title">Constraint Selector</p>
+            <div class="chip-row">
+              <button type="button" class="constraint-chip active" data-constraint="none">No Constraint</button>
+              <button type="button" class="constraint-chip" data-constraint="vegan">Vegan</button>
+              <button type="button" class="constraint-chip" data-constraint="gluten-free">Gluten-Free</button>
+              <button type="button" class="constraint-chip" data-constraint="lactose-free">Lactose-Free</button>
+            </div>
+            <select id="constraintSelect" class="visually-hidden" aria-hidden="true">
+              <option value="none" selected>None</option>
+              <option value="vegan">Vegan</option>
+              <option value="gluten-free">Gluten Free</option>
+              <option value="lactose-free">Lactose Free</option>
+            </select>
+          </div>
+        </div>
 
-<div class="nav-links">
+        <button class="primary-btn" type="button" onclick="findSubstitute()">Find Substitute</button>
+        <p id="statusText" class="status-line"></p>
+      </div>
+    </section>
 
-<a href="index.html">Home</a>
+    <section class="results-card">
+      <h2>Ranked Substitute Ingredients</h2>
+      <p id="resultsPlaceholder" class="results-placeholder">
+        Fetch ingredients and choose a missing item to generate recommendations.
+      </p>
+      <div class="result" id="resultBox" style="display:none;">
+        <div id="resultText"></div>
+      </div>
+    </section>
+  </div>
 
-</div>
-
-</div>
-
-
-<div class="dashboard-container">
-
-
-<h2>Find Substitute Ingredient</h2>
-
-<p id="statusText" style="margin-bottom: 16px; color: #333;"></p>
-
-
-<!-- STEP 1: Dish -->
-
-<div class="form-group">
-
-<label>Dish Name</label>
-
-<input type="text" id="dishInput" placeholder="Example: Pancakes">
-
-</div>
-
-
-<button onclick="fetchIngredients()">
-
-Fetch Ingredients
-
-</button>
-
-
-<!-- STEP 2: Ingredients -->
-
-<div class="form-group">
-
-<label>Select Missing Ingredient</label>
-
-<select id="ingredientSelect">
-<option value="">Fetch ingredients first</option>
-</select>
-
-</div>
-
-
-<!-- STEP 3: Constraint -->
-
-<div class="form-group">
-
-<label>Constraint</label>
-
-<select id="constraintSelect">
-
-<option value="none">None</option>
-<option value="vegan">Vegan</option>
-<option value="gluten-free">Gluten Free</option>
-<option value="lactose-free">Lactose Free</option>
-
-</select>
-
-</div>
-
-
-<button onclick="findSubstitute()">
-
-Find Substitute
-
-</button>
-
-
-<!-- RESULT -->
-
-<div class="result" id="resultBox" style="display:none;">
-
-<h3>Suggested Substitute:</h3>
-
-<div id="resultText"></div>
-
-</div>
-
-
-</div>
-
-
-</div>
-
-
-<script src="js/dashboard.js"></script>
-
-
+  <script src="js/dashboard.js"></script>
 </body>
 </html>

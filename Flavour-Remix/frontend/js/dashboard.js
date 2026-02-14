@@ -48,6 +48,16 @@ function renderIngredients(ingredients) {
 }
 
 
+function cleanFlavorToken(token) {
+  if (typeof token !== "string") return "";
+  return token
+    .replace(/^category:/i, "")
+    .replace(/^entity:/i, "")
+    .replace(/_/g, " ")
+    .trim();
+}
+
+
 function normalizeErrorDetail(detail) {
   if (!detail) return "Request failed.";
   if (typeof detail === "string") return detail;
@@ -73,6 +83,7 @@ async function parseErrorMessage(response) {
 function renderSubstituteResult(data, constraint) {
   const resultBox = document.getElementById("resultBox");
   const resultText = document.getElementById("resultText");
+  const resultsPlaceholder = document.getElementById("resultsPlaceholder");
 
   const suggestions = Array.isArray(data.suggested_replacements)
     ? data.suggested_replacements
@@ -81,6 +92,7 @@ function renderSubstituteResult(data, constraint) {
   if (suggestions.length === 0) {
     resultText.innerHTML = "<p>No substitutes found.</p>";
     resultBox.style.display = "block";
+    if (resultsPlaceholder) resultsPlaceholder.style.display = "none";
     return;
   }
 
@@ -89,17 +101,34 @@ function renderSubstituteResult(data, constraint) {
   const score = data.matched_recipe_ingredient_score ?? 0;
 
   const itemsHtml = suggestions
-    .map((item) => {
+    .map((item, index) => {
       const jaccard = item.similarity?.jaccard ?? 0;
+      const matchPercent = Math.round(jaccard * 100);
       const overlap = item.similarity?.overlap_count ?? 0;
       const why = item.why_recommended || "";
+      const overlapTerms = Array.isArray(item.similarity?.overlap_terms)
+        ? item.similarity.overlap_terms
+        : [];
+      const chips = overlapTerms
+        .map(cleanFlavorToken)
+        .filter(Boolean)
+        .slice(0, 4);
+
+      const chipHtml = chips.length
+        ? chips.map((chip) => `<span class="flavor-chip">${chip}</span>`).join("")
+        : `<span class="flavor-chip">No overlap terms</span>`;
 
       return `
-        <li style="margin-bottom: 10px;">
-          <strong>${item.ingredient}</strong>
-          <div>Jaccard: ${jaccard} | Overlap terms: ${overlap}</div>
-          <div style="font-size: 13px; color: #555;">${why}</div>
-        </li>
+        <article class="suggestion-card">
+          <div class="rank-line">
+            <span class="rank-id">#${index + 1}</span>
+          </div>
+          <h3 class="ingredient-name">${item.ingredient}</h3>
+          <p class="match-score">${matchPercent}% Match</p>
+          <p class="meta-line">Jaccard: ${jaccard} | Overlap terms: ${overlap}</p>
+          <div class="chip-list">${chipHtml}</div>
+          <p class="why-line">${why}</p>
+        </article>
       `;
     })
     .join("");
@@ -114,16 +143,19 @@ function renderSubstituteResult(data, constraint) {
     <p><strong>Dish:</strong> ${recipeTitle}</p>
     <p><strong>Matched ingredient:</strong> ${matched} (score: ${score})</p>
     ${constraintNote}
-    <ol style="margin-top: 12px; padding-left: 18px;">${itemsHtml}</ol>
+    <div class="suggestion-grid">${itemsHtml}</div>
   `;
 
   resultBox.style.display = "block";
+  if (resultsPlaceholder) resultsPlaceholder.style.display = "none";
 }
 
 
 async function fetchIngredients() {
   const dishInput = document.getElementById("dishInput");
   const dish = dishInput.value.trim();
+  const resultBox = document.getElementById("resultBox");
+  const resultsPlaceholder = document.getElementById("resultsPlaceholder");
 
   if (!dish) {
     setStatus("Please enter a dish name.", "error");
@@ -131,6 +163,8 @@ async function fetchIngredients() {
   }
 
   setStatus("Fetching ingredients...", "info");
+  if (resultBox) resultBox.style.display = "none";
+  if (resultsPlaceholder) resultsPlaceholder.style.display = "block";
 
   try {
     const url = new URL(`${API_BASE}/recipe-ingredients`);
@@ -212,6 +246,29 @@ async function findSubstitute() {
     setStatus(`Could not fetch substitutes: ${error.message}`, "error");
   }
 }
+
+
+function setupConstraintChips() {
+  const chips = document.querySelectorAll(".constraint-chip");
+  const select = document.getElementById("constraintSelect");
+  if (!chips.length || !select) return;
+
+  chips.forEach((chip) => {
+    chip.addEventListener("click", () => {
+      const value = chip.getAttribute("data-constraint");
+      if (!value) return;
+
+      select.value = value;
+      chips.forEach((c) => c.classList.remove("active"));
+      chip.classList.add("active");
+    });
+  });
+}
+
+
+window.addEventListener("DOMContentLoaded", () => {
+  setupConstraintChips();
+});
 
 
 window.fetchIngredients = fetchIngredients;
