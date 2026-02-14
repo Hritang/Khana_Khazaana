@@ -266,8 +266,25 @@ function setupConstraintChips() {
 }
 
 
+function setupTopNavActive() {
+  const topNavItems = document.querySelectorAll(".top-nav .nav-item");
+  if (!topNavItems.length) return;
+
+  topNavItems.forEach((item) => {
+    item.addEventListener("click", () => {
+      const href = item.getAttribute("href") || "";
+      if (href === "#" || href.startsWith("#") || href.endsWith("dashboard.html")) {
+        topNavItems.forEach((other) => other.classList.remove("active"));
+        item.classList.add("active");
+      }
+    });
+  });
+}
+
+
 window.addEventListener("DOMContentLoaded", () => {
   setupConstraintChips();
+  setupTopNavActive();
 });
 
 

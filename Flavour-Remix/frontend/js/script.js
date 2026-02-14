@@ -51,6 +51,19 @@ window.addEventListener("load", function() {
     });
   }
 
+  const topNavItems = document.querySelectorAll(".top-nav .nav-item");
+  topNavItems.forEach(function(item) {
+    item.addEventListener("click", function() {
+      const href = item.getAttribute("href") || "";
+      if (href.startsWith("#") || href === "index.html") {
+        topNavItems.forEach(function(other) {
+          other.classList.remove("active");
+        });
+        item.classList.add("active");
+      }
+    });
+  });
+
 });
 
 
