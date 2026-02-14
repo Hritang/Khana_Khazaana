@@ -10,6 +10,10 @@ const appState = {
   resolvedRecipeId: "",
 };
 
+const DEFAULT_VISUAL_TITLE = "Flavor Intelligent Substitution";
+const DEFAULT_VISUAL_DESCRIPTION =
+  "Enter a dish, pick the missing ingredient, apply a dietary constraint, and get ranked replacements based on FlavorDB similarity.";
+
 
 function setStatus(message, type = "info") {
   const statusEl = document.getElementById("statusText");
@@ -24,6 +28,78 @@ function setStatus(message, type = "info") {
     return;
   }
   statusEl.style.color = "#333";
+}
+
+
+function resetRecipePreview() {
+  const visualTitle = document.getElementById("visualTitle");
+  const visualDescription = document.getElementById("visualDescription");
+  const recipeMeta = document.getElementById("recipeMeta");
+  const recipeMetaBadges = document.getElementById("recipeMetaBadges");
+  const recipeIngredientPreview = document.getElementById("recipeIngredientPreview");
+  const recipeIngredientNote = document.getElementById("recipeIngredientNote");
+
+  if (visualTitle) visualTitle.textContent = DEFAULT_VISUAL_TITLE;
+  if (visualDescription) visualDescription.textContent = DEFAULT_VISUAL_DESCRIPTION;
+  if (recipeMeta) recipeMeta.style.display = "none";
+  if (recipeMetaBadges) recipeMetaBadges.innerHTML = "";
+  if (recipeIngredientPreview) recipeIngredientPreview.innerHTML = "";
+  if (recipeIngredientNote) recipeIngredientNote.textContent = "";
+}
+
+
+function renderRecipePreview(data) {
+  const visualTitle = document.getElementById("visualTitle");
+  const visualDescription = document.getElementById("visualDescription");
+  const recipeMeta = document.getElementById("recipeMeta");
+  const recipeMetaBadges = document.getElementById("recipeMetaBadges");
+  const recipeIngredientPreview = document.getElementById("recipeIngredientPreview");
+  const recipeIngredientNote = document.getElementById("recipeIngredientNote");
+
+  if (!visualTitle || !visualDescription || !recipeMeta || !recipeMetaBadges || !recipeIngredientPreview || !recipeIngredientNote) {
+    return;
+  }
+
+  const recipe = data?.recipe || {};
+  const ingredients = Array.isArray(data?.ingredients) ? data.ingredients : [];
+
+  const recipeTitle = recipe.Recipe_title || appState.currentTitle || "Selected Recipe";
+  visualTitle.textContent = recipeTitle;
+
+  const summaryParts = [];
+  if (recipe.Region) summaryParts.push(`Region: ${recipe.Region}`);
+  if (recipe.Sub_region) summaryParts.push(`Sub-region: ${recipe.Sub_region}`);
+  if (recipe.Continent) summaryParts.push(`Continent: ${recipe.Continent}`);
+  if (recipe.Source) summaryParts.push(`Source: ${recipe.Source}`);
+  visualDescription.textContent = summaryParts.length
+    ? summaryParts.join(" | ")
+    : "Recipe metadata loaded from RecipeDB.";
+
+  const badges = [];
+  if (recipe.total_time) badges.push(`Total: ${recipe.total_time}`);
+  if (recipe.prep_time) badges.push(`Prep: ${recipe.prep_time}`);
+  if (recipe.cook_time) badges.push(`Cook: ${recipe.cook_time}`);
+  if (recipe.servings) badges.push(`Servings: ${recipe.servings}`);
+  if (recipe.Recipe_id) badges.push(`ID: ${recipe.Recipe_id}`);
+
+  recipeMetaBadges.innerHTML = badges
+    .slice(0, 6)
+    .map((badge) => `<span class="meta-badge">${badge}</span>`)
+    .join("");
+
+  const previewCount = 8;
+  const previewItems = ingredients.slice(0, previewCount);
+  recipeIngredientPreview.innerHTML = previewItems
+    .map((item) => `<li class="recipe-ingredient-item">${item}</li>`)
+    .join("");
+
+  if (ingredients.length > previewCount) {
+    recipeIngredientNote.textContent = `+${ingredients.length - previewCount} more ingredient(s)`;
+  } else {
+    recipeIngredientNote.textContent = `${ingredients.length} ingredient(s) total`;
+  }
+
+  recipeMeta.style.display = "block";
 }
 
 
@@ -165,6 +241,10 @@ async function fetchIngredients() {
   setStatus("Fetching ingredients...", "info");
   if (resultBox) resultBox.style.display = "none";
   if (resultsPlaceholder) resultsPlaceholder.style.display = "block";
+  const visualTitle = document.getElementById("visualTitle");
+  const visualDescription = document.getElementById("visualDescription");
+  if (visualTitle) visualTitle.textContent = dish || DEFAULT_VISUAL_TITLE;
+  if (visualDescription) visualDescription.textContent = "Fetching recipe details...";
 
   try {
     const url = new URL(`${API_BASE}/recipe-ingredients`);
@@ -187,10 +267,12 @@ async function fetchIngredients() {
       String(data.recipe?.Recipe_id || data.lookup?.resolved_recipe_id || "");
 
     renderIngredients(data.ingredients || []);
+    renderRecipePreview(data);
     setStatus(`Loaded ${data.ingredients_count || 0} ingredients.`, "success");
   } catch (error) {
     setStatus(`Could not fetch ingredients: ${error.message}`, "error");
     renderIngredients([]);
+    resetRecipePreview();
   }
 }
 
@@ -285,6 +367,7 @@ function setupTopNavActive() {
 window.addEventListener("DOMContentLoaded", () => {
   setupConstraintChips();
   setupTopNavActive();
+  resetRecipePreview();
 });
 
 
