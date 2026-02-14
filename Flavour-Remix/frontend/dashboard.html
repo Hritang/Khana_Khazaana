@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Khana Khazaana Dashboard</title>
+
+<link rel="stylesheet" href="css/style.css">
+
+<style>
+
+.dashboard-container {
+
+  max-width: 800px;
+  margin: 50px auto;
+  background: rgba(255,255,255,0.6);
+  padding: 30px;
+  border-radius: 20px;
+
+}
+
+.form-group {
+
+  margin-bottom: 20px;
+
+}
+
+input, select {
+
+  width: 100%;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+
+}
+
+button {
+
+  padding: 12px 20px;
+  border: none;
+  border-radius: 10px;
+  background: #184d3b;
+  color: white;
+  cursor: pointer;
+
+}
+
+.result {
+
+  margin-top: 20px;
+  padding: 15px;
+  background: white;
+  border-radius: 10px;
+
+}
+
+</style>
+
+</head>
+<body>
+
+
+<div class="main-container">
+
+
+<div class="navbar">
+
+<div class="logo">Khana Khazaana</div>
+
+<div class="nav-links">
+
+<a href="index.html">Home</a>
+
+</div>
+
+</div>
+
+
+<div class="dashboard-container">
+
+
+<h2>Find Substitute Ingredient</h2>
+
+<p id="statusText" style="margin-bottom: 16px; color: #333;"></p>
+
+
+<!-- STEP 1: Dish -->
+
+<div class="form-group">
+
+<label>Dish Name</label>
+
+<input type="text" id="dishInput" placeholder="Example: Pancakes">
+
+</div>
+
+
+<button onclick="fetchIngredients()">
+
+Fetch Ingredients
+
+</button>
+
+
+<!-- STEP 2: Ingredients -->
+
+<div class="form-group">
+
+<label>Select Missing Ingredient</label>
+
+<select id="ingredientSelect">
+<option value="">Fetch ingredients first</option>
+</select>
+
+</div>
+
+
+<!-- STEP 3: Constraint -->
+
+<div class="form-group">
+
+<label>Constraint</label>
+
+<select id="constraintSelect">
+
+<option value="none">None</option>
+<option value="vegan">Vegan</option>
+<option value="gluten-free">Gluten Free</option>
+<option value="lactose-free">Lactose Free</option>
+
+</select>
+
+</div>
+
+
+<button onclick="findSubstitute()">
+
+Find Substitute
+
+</button>
+
+
+<!-- RESULT -->
+
+<div class="result" id="resultBox" style="display:none;">
+
+<h3>Suggested Substitute:</h3>
+
+<div id="resultText"></div>
+
+</div>
+
+
+</div>
+
+
+</div>
+
+
+<script src="js/dashboard.js"></script>
+
+
+</body>
+</html>

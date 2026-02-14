@@ -5,7 +5,6 @@ from typing import Any
 import requests
 
 DEFAULT_BASE_URL = "http://192.168.1.92:6969/flavordb"
-DEFAULT_AUTH_TOKEN = "5GYS4ukGSZHEICP1lIOQBtzBLmFcDMlq279L2Y-GF159yn5M"
 TIMEOUT_SECONDS = float(os.getenv("FLAVORDB_TIMEOUT_SECONDS", "15"))
 
 
@@ -16,7 +15,7 @@ class FlavorDBClientError(Exception):
 
 
 def _get_base_url() -> str:
-    return DEFAULT_BASE_URL
+    return os.getenv("FLAVORDB_BASE_URL", DEFAULT_BASE_URL).rstrip("/")
 
 
 def _get_auth_token_and_source() -> tuple[str, str]:
@@ -25,7 +24,6 @@ def _get_auth_token_and_source() -> tuple[str, str]:
         ("FOODOSCOPE_API_KEY", os.getenv("FOODOSCOPE_API_KEY")),
         ("FLAVORDB_API_KEY", os.getenv("FLAVORDB_API_KEY")),
         ("AUTH_TOKEN", os.getenv("AUTH_TOKEN")),
-        ("DEFAULT_AUTH_TOKEN", DEFAULT_AUTH_TOKEN),
     ]
 
     token = ""
@@ -61,6 +59,44 @@ def _build_headers() -> dict[str, str]:
     }
 
 
+def _extract_api_error(response: requests.Response | None) -> str | None:
+    if response is None:
+        return None
+
+    try:
+        payload = response.json()
+    except ValueError:
+        return None
+
+    if not isinstance(payload, dict):
+        return None
+
+    for key in ("error", "message", "detail"):
+        value = payload.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+
+    return None
+
+
+def _looks_like_auth_error(error_text: str | None) -> bool:
+    if not error_text:
+        return False
+
+    lowered = error_text.lower()
+    auth_markers = [
+        "invalid api key",
+        "api key is not provided",
+        "apikey is not provided",
+        "only bearer token is allowed",
+        "not enough tokens",
+        "unauthorized",
+        "forbidden",
+        "token expired",
+    ]
+    return any(marker in lowered for marker in auth_markers)
+
+
 def _request(path: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
     url = f"{_get_base_url()}{path}"
 
@@ -74,9 +110,16 @@ def _request(path: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
         response.raise_for_status()
     except requests.HTTPError as exc:
         status = exc.response.status_code if exc.response is not None else 502
+        api_error = _extract_api_error(exc.response)
+        if _looks_like_auth_error(api_error):
+            status = 401
+
         message = f"FlavorDB request failed for {path}: HTTP {status}."
-        if status == 401:
+        if api_error:
+            message += f" {api_error}"
+        elif status == 401:
             message += " Unauthorized token."
+
         raise FlavorDBClientError(message, status_code=status) from exc
     except requests.RequestException as exc:
         raise FlavorDBClientError(
@@ -259,7 +302,7 @@ def get_runtime_config() -> dict[str, Any]:
     token, token_source = _get_auth_token_and_source()
     return {
         "base_url": _get_base_url(),
-        "token_configured": bool(token_source),
+        "token_configured": bool(token),
         "token_source": token_source or None,
         "token_length": len(token),
         "token_preview": (f"{token[:4]}...{token[-4:]}" if len(token) >= 8 else None),

@@ -5,7 +5,6 @@ from typing import Any
 import requests
 
 DEFAULT_BASE_URL = "http://cosylab.iiitd.edu.in:6969"
-DEFAULT_AUTH_TOKEN = "5GYS4ukGSZHEICP1lIOQBtzBLmFcDMlq279L2Y-GF159yn5M"
 TIMEOUT_SECONDS = float(os.getenv("RECIPEDB_TIMEOUT_SECONDS", "20"))
 
 
@@ -26,7 +25,6 @@ def _get_auth_token_and_source() -> tuple[str, str]:
         ("FOODOSCOPE_API_KEY", os.getenv("FOODOSCOPE_API_KEY")),
         ("FLAVORDB_API_KEY", os.getenv("FLAVORDB_API_KEY")),
         ("AUTH_TOKEN", os.getenv("AUTH_TOKEN")),
-        ("DEFAULT_AUTH_TOKEN", DEFAULT_AUTH_TOKEN),
     ]
 
     token = ""
@@ -59,6 +57,44 @@ def _build_headers() -> dict[str, str]:
         "Content-Type": "application/json",
         "Accept": "application/json",
     }
+
+
+def _extract_api_error(response: requests.Response | None) -> str | None:
+    if response is None:
+        return None
+
+    try:
+        payload = response.json()
+    except ValueError:
+        return None
+
+    if not isinstance(payload, dict):
+        return None
+
+    for key in ("error", "message", "detail"):
+        value = payload.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+
+    return None
+
+
+def _looks_like_auth_error(error_text: str | None) -> bool:
+    if not error_text:
+        return False
+
+    lowered = error_text.lower()
+    auth_markers = [
+        "invalid api key",
+        "api key is not provided",
+        "apikey is not provided",
+        "only bearer token is allowed",
+        "not enough tokens",
+        "unauthorized",
+        "forbidden",
+        "token expired",
+    ]
+    return any(marker in lowered for marker in auth_markers)
 
 
 def _request(path: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -102,8 +138,16 @@ def _request(path: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
         response.raise_for_status()
     except requests.HTTPError as exc:
         status = exc.response.status_code if exc.response is not None else 502
+        api_error = _extract_api_error(exc.response)
+        if _looks_like_auth_error(api_error):
+            status = 401
+
+        message = f"RecipeDB request failed for {path}: HTTP {status}."
+        if api_error:
+            message += f" {api_error}"
+
         raise RecipeDBClientError(
-            f"RecipeDB request failed for {path}: HTTP {status}.",
+            message,
             status_code=status,
         ) from exc
 
