@@ -4,7 +4,7 @@ from typing import Any
 
 import requests
 
-DEFAULT_BASE_URL = "https://api.foodoscope.com"
+DEFAULT_BASE_URL = "http://cosylab.iiitd.edu.in:6969"
 DEFAULT_AUTH_TOKEN = "5GYS4ukGSZHEICP1lIOQBtzBLmFcDMlq279L2Y-GF159yn5M"
 TIMEOUT_SECONDS = float(os.getenv("RECIPEDB_TIMEOUT_SECONDS", "20"))
 

@@ -4,7 +4,7 @@ from typing import Any
 
 import requests
 
-DEFAULT_BASE_URL = "https://api.foodoscope.com/flavordb"
+DEFAULT_BASE_URL = "http://192.168.1.92:6969/flavordb"
 DEFAULT_AUTH_TOKEN = "5GYS4ukGSZHEICP1lIOQBtzBLmFcDMlq279L2Y-GF159yn5M"
 TIMEOUT_SECONDS = float(os.getenv("FLAVORDB_TIMEOUT_SECONDS", "15"))
 
@@ -173,8 +173,9 @@ def get_flavor_profile_by_ingredient(name: str) -> list[str]:
     try:
         data = get_molecules_by_common_name(name=name, page=0, size=50)
     except FlavorDBClientError as exc:
-        # Many cooking ingredients (e.g., butter/ghee) are entities, not molecule common names.
-        if exc.status_code == 404:
+        # Some FlavorDB deployments return 400, others 404 for non-molecule ingredient names.
+        # Fall back to entity-based pairing signature in both cases.
+        if exc.status_code in (400, 404):
             return _profile_from_food_pairings(name)
         raise
 
