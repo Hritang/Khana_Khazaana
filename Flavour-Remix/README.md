@@ -40,6 +40,7 @@ http://127.0.0.1:8000/docs
 - `GET /compare?ingredient1=ginger&ingredient2=galangal`
 - `GET /replace?ingredient=butter&limit=5`
 - `GET /replace?ingredient=butter&candidates=olive oil,ghee,yogurt&limit=3`
+- `GET /replace?ingredient=butter&constraint=lactose-free&limit=5`
 - `GET /recipe-ingredients?title=Egyptian Lentil Soup`
 - `GET /recipe-ingredients?recipe_id=2610`
 - `POST /dish-replace`
@@ -51,6 +52,7 @@ Example request body for `POST /replace-in-recipe`:
 {
   "recipe_id": "2610",
   "ingredient_to_replace": "cumin",
+  "constraint": "vegan",
   "limit": 5
 }
 ```
@@ -61,6 +63,7 @@ Or with title lookup:
 {
   "title": "Egyptian Lentil Soup",
   "ingredient_to_replace": "cumin",
+  "constraint": "none",
   "limit": 5
 }
 ```
@@ -89,6 +92,7 @@ Single-step flow (frontend-friendly):
 {
   "title": "Egyptian Lentil Soup",
   "ingredient_to_replace": "cumin",
+  "constraint": "gluten-free",
   "limit": 5
 }
 ```

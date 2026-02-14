@@ -11,11 +11,19 @@ const appState = {
 };
 
 
-function setStatus(message, isError = false) {
+function setStatus(message, type = "info") {
   const statusEl = document.getElementById("statusText");
   if (!statusEl) return;
   statusEl.textContent = message;
-  statusEl.style.color = isError ? "#a94442" : "#333";
+  if (type === "error") {
+    statusEl.style.color = "#a94442";
+    return;
+  }
+  if (type === "success") {
+    statusEl.style.color = "#184d3b";
+    return;
+  }
+  statusEl.style.color = "#333";
 }
 
 
@@ -81,14 +89,14 @@ function renderSubstituteResult(data, constraint) {
   const score = data.matched_recipe_ingredient_score ?? 0;
 
   const itemsHtml = suggestions
-    .map((item, index) => {
+    .map((item) => {
       const jaccard = item.similarity?.jaccard ?? 0;
       const overlap = item.similarity?.overlap_count ?? 0;
       const why = item.why_recommended || "";
 
       return `
         <li style="margin-bottom: 10px;">
-          <strong>${index + 1}. ${item.ingredient}</strong>
+          <strong>${item.ingredient}</strong>
           <div>Jaccard: ${jaccard} | Overlap terms: ${overlap}</div>
           <div style="font-size: 13px; color: #555;">${why}</div>
         </li>
@@ -96,9 +104,10 @@ function renderSubstituteResult(data, constraint) {
     })
     .join("");
 
+  const appliedConstraint = data.applied_constraint || constraint || "none";
   const constraintNote =
-    constraint && constraint !== "none"
-      ? `<p style="font-size: 13px; color: #666;">Constraint selected: <strong>${constraint}</strong> (currently informational).</p>`
+    appliedConstraint && appliedConstraint !== "none"
+      ? `<p style="font-size: 13px; color: #666;">Applied constraint: <strong>${appliedConstraint}</strong> (filtered out ${data.constraint_filtered_out || 0} candidate(s)).</p>`
       : "";
 
   resultText.innerHTML = `
@@ -117,11 +126,11 @@ async function fetchIngredients() {
   const dish = dishInput.value.trim();
 
   if (!dish) {
-    setStatus("Please enter a dish name.", true);
+    setStatus("Please enter a dish name.", "error");
     return;
   }
 
-  setStatus("Fetching ingredients...");
+  setStatus("Fetching ingredients...", "info");
 
   try {
     const url = new URL(`${API_BASE}/recipe-ingredients`);
@@ -144,9 +153,9 @@ async function fetchIngredients() {
       String(data.recipe?.Recipe_id || data.lookup?.resolved_recipe_id || "");
 
     renderIngredients(data.ingredients || []);
-    setStatus(`Loaded ${data.ingredients_count || 0} ingredients.`);
+    setStatus(`Loaded ${data.ingredients_count || 0} ingredients.`, "success");
   } catch (error) {
-    setStatus(`Could not fetch ingredients: ${error.message}`, true);
+    setStatus(`Could not fetch ingredients: ${error.message}`, "error");
     renderIngredients([]);
   }
 }
@@ -159,21 +168,22 @@ async function findSubstitute() {
   const title = (appState.currentTitle || dishInput.value || "").trim();
 
   if (!title) {
-    setStatus("Please enter a dish name first.", true);
+    setStatus("Please enter a dish name first.", "error");
     return;
   }
 
   if (!selectedIngredient) {
-    setStatus("Please select an ingredient to replace.", true);
+    setStatus("Please select an ingredient to replace.", "error");
     return;
   }
 
-  setStatus("Finding substitutions...");
+  setStatus("Finding substitutions...", "info");
 
   const payload = {
     title,
     ingredient_to_replace: selectedIngredient,
     limit: 5,
+    constraint,
   };
 
   if (appState.resolvedRecipeId) {
@@ -197,9 +207,9 @@ async function findSubstitute() {
 
     const data = await response.json();
     renderSubstituteResult(data, constraint);
-    setStatus("Substitute suggestions ready.");
+    setStatus("Substitute suggestions ready.", "success");
   } catch (error) {
-    setStatus(`Could not fetch substitutes: ${error.message}`, true);
+    setStatus(`Could not fetch substitutes: ${error.message}`, "error");
   }
 }
 

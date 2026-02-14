@@ -1,7 +1,7 @@
 import os
 import re
 from difflib import SequenceMatcher
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -71,6 +71,10 @@ class ReplaceInRecipeRequest(BaseModel):
         default=None,
         description="Optional explicit candidate ingredients.",
     )
+    constraint: Literal["none", "vegan", "gluten-free", "lactose-free"] = Field(
+        default="none",
+        description="Dietary constraint for filtering suggestions.",
+    )
 
 
 class DishReplaceRequest(BaseModel):
@@ -93,12 +97,106 @@ class DishReplaceRequest(BaseModel):
         default=None,
         description="Optional RecipeDB Recipe_id override.",
     )
+    constraint: Literal["none", "vegan", "gluten-free", "lactose-free"] = Field(
+        default="none",
+        description="Dietary constraint for filtering suggestions.",
+    )
 
 
 def _normalize_ingredient_name(value: str) -> str:
     lowered = value.strip().lower()
     cleaned = re.sub(r"[^a-z0-9]+", " ", lowered)
     return " ".join(cleaned.split())
+
+
+CONSTRAINT_BLOCKLISTS: dict[str, tuple[str, ...]] = {
+    "vegan": (
+        "beef",
+        "chicken",
+        "pork",
+        "lamb",
+        "mutton",
+        "fish",
+        "shrimp",
+        "prawn",
+        "anchovy",
+        "bacon",
+        "sausage",
+        "egg",
+        "milk",
+        "butter",
+        "ghee",
+        "cheese",
+        "paneer",
+        "cream",
+        "yogurt",
+        "yoghurt",
+        "curd",
+        "whey",
+        "casein",
+        "gelatin",
+        "honey",
+    ),
+    "lactose-free": (
+        "milk",
+        "butter",
+        "ghee",
+        "cheese",
+        "paneer",
+        "cream",
+        "yogurt",
+        "yoghurt",
+        "curd",
+        "whey",
+        "casein",
+        "lactose",
+    ),
+    "gluten-free": (
+        "wheat",
+        "barley",
+        "rye",
+        "flour",
+        "bread",
+        "pasta",
+        "noodle",
+        "noodles",
+        "semolina",
+        "couscous",
+        "bulgur",
+        "seitan",
+        "malt",
+    ),
+}
+
+
+def _is_candidate_allowed(candidate: str, constraint: str) -> bool:
+    if constraint == "none":
+        return True
+
+    normalized = _normalize_ingredient_name(candidate)
+    if not normalized:
+        return False
+
+    blocked_terms = CONSTRAINT_BLOCKLISTS.get(constraint, ())
+    for term in blocked_terms:
+        pattern = rf"\b{re.escape(term)}\b"
+        if re.search(pattern, normalized):
+            return False
+    return True
+
+
+def _filter_candidates_by_constraint(
+    candidate_pool: list[str],
+    constraint: str,
+) -> tuple[list[str], list[str]]:
+    allowed: list[str] = []
+    blocked: list[str] = []
+    for candidate in candidate_pool:
+        if _is_candidate_allowed(candidate, constraint):
+            allowed.append(candidate)
+        else:
+            blocked.append(candidate)
+    return allowed, blocked
 
 
 def _match_recipe_ingredient(target: str, recipe_ingredients: list[str]) -> tuple[str | None, float]:
@@ -163,6 +261,7 @@ def _rank_replacements(
     candidate_pool: list[str],
     *,
     skip_ingredient: str | None = None,
+    constraint: str = "none",
 ) -> list[dict[str, Any]]:
     ranked: list[dict[str, Any]] = []
     skip_norm = skip_ingredient.strip().lower() if isinstance(skip_ingredient, str) else ""
@@ -170,6 +269,8 @@ def _rank_replacements(
     for candidate in candidate_pool:
         candidate_norm = candidate.strip().lower()
         if skip_norm and candidate_norm == skip_norm:
+            continue
+        if not _is_candidate_allowed(candidate, constraint):
             continue
 
         try:
@@ -271,6 +372,10 @@ def compare(
 def suggest_replacements(
     ingredient: str = Query(..., min_length=1),
     limit: int = Query(5, ge=1, le=20),
+    constraint: Literal["none", "vegan", "gluten-free", "lactose-free"] = Query(
+        default="none",
+        description="Optional dietary filter for suggested replacements.",
+    ),
     candidates: str | None = Query(
         default=None,
         description="Optional comma-separated candidate ingredients.",
@@ -309,10 +414,29 @@ def suggest_replacements(
             ),
         )
 
-    ranked = _rank_replacements(target_profile, candidate_pool)
+    filtered_candidates, blocked_candidates = _filter_candidates_by_constraint(
+        candidate_pool,
+        constraint,
+    )
+    if not filtered_candidates:
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                "No replacement candidates remain after applying constraint "
+                f"'{constraint}'."
+            ),
+        )
+
+    ranked = _rank_replacements(
+        target_profile,
+        filtered_candidates,
+        constraint=constraint,
+    )
 
     return {
         "target_ingredient": ingredient,
+        "applied_constraint": constraint,
+        "constraint_filtered_out": len(blocked_candidates),
         "target_profile_size": len(target_profile),
         "candidates_evaluated": len(ranked),
         "suggested_replacements": ranked[:limit],
@@ -369,6 +493,7 @@ def dish_replace(payload: DishReplaceRequest) -> dict:
         ingredient_to_replace=payload.ingredient_to_replace,
         limit=payload.limit,
         candidates=payload.candidates,
+        constraint=payload.constraint,
     )
     return replace_in_recipe(replace_payload)
 
@@ -438,10 +563,24 @@ def replace_in_recipe(payload: ReplaceInRecipeRequest) -> dict:
             detail="No replacement candidates were found.",
         )
 
+    filtered_candidates, blocked_candidates = _filter_candidates_by_constraint(
+        candidate_pool,
+        payload.constraint,
+    )
+    if not filtered_candidates:
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                "No replacement candidates remain after applying constraint "
+                f"'{payload.constraint}'."
+            ),
+        )
+
     ranked = _rank_replacements(
         target_profile,
-        candidate_pool,
+        filtered_candidates,
         skip_ingredient=matched_ingredient,
+        constraint=payload.constraint,
     )
 
     recipe = recipe_bundle.get("recipe", {})
@@ -454,6 +593,8 @@ def replace_in_recipe(payload: ReplaceInRecipeRequest) -> dict:
         },
         "lookup": recipe_bundle.get("lookup"),
         "ingredient_to_replace": payload.ingredient_to_replace,
+        "applied_constraint": payload.constraint,
+        "constraint_filtered_out": len(blocked_candidates),
         "matched_recipe_ingredient": matched_ingredient,
         "matched_recipe_ingredient_score": matched_score,
         "recipe_ingredients": recipe_ingredients,
